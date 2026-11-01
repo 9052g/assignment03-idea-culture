@@ -10,19 +10,23 @@ const status = document.querySelector('#status');
 
 let w = 0, h = 0, dpr = 1, nodes = [], fronts = [], occupied = new Map(), links = [];
 let encounters = new Set(), running = true, pending = null, last = 0, frame = 0, simTime = 0, nextTrace = 1;
-let ideaQueue = Promise.resolve();
 let collisionQueue = [], queuedPairs = new Set();
 let nextBirthAt = 0;
+let lastPlantAt = -Infinity;
+let lastAutoShownAt = -Infinity, nextAutoDelay = 0;
 let selectedIdea = null;
-const variations=['视角反转','提问','矛盾','隐喻'];
-const colors = ['#dbe992', '#b4de9d', '#c3d88c', '#a9d4a2', '#d0e39d'];
+const variations=['画面','日常错位','假设','隐喻','规则','视角反转','提问'];
+const colors = ['#52745b', '#68846a', '#738b6e', '#547968', '#84966f'];
 
 function size() {
   w = innerWidth; h = innerHeight; dpr = Math.min(devicePixelRatio || 1, 2);
   canvas.width = w * dpr; canvas.height = h * dpr;
   canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  film.width = veins.width = w; film.height = veins.height = h;
+  film.width = veins.width = Math.round(w * dpr);
+  film.height = veins.height = Math.round(h * dpr);
+  filmCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  veinCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   occupied.clear();
 }
 
@@ -34,12 +38,18 @@ function updateGuide() {
   const seeds=nodes.filter(n=>!n.child).length;
   const ideas=nodes.filter(n=>n.child);
   let text;
-  if(seeds===0) text='点击空白处，输入一个词并点「种下」；再在附近另一处种下第二个词。';
-  else if(seeds===1) text='第一个词已经种下。再点击附近的空白处，输入第二个词；两株菌丝相遇后会产生新想法。';
+  if(seeds===0) text='点击画面空白处，输入一个词并点「种下」；然后点击附近的另一处空白，输入并种下第二个词。建议先种下 2—3 个词，观察它们生长。';
+  else if(seeds===1) text='第一个词已经种下。请点击画面附近的另一处空白，输入并种下第二个词；两株菌丝相遇后会产生新想法。';
+  else if(seeds===2) {
+    text='第二个词已经种下。再点击附近另一处空白，输入并种下第三个词；你也可以等待菌丝相遇，看看会长出什么。';
+    if(ideas.some(n=>n.failed)) text+=' 如果联想失败，可以点击「重试联想」。';
+    else if(ideas.some(n=>n.description)) text+=' 点击新念头可以查看内容。';
+  }
   else if(ideas.some(n=>n.description)) text='新想法已经长出。点击新词查看内容，也可以继续点击空白处种下其他词。';
   else if(ideas.some(n=>n.pending)) text='菌丝相遇了，新想法正在生长。等一等，也可以继续点击空白处种词。';
   else if(ideas.some(n=>n.failed)) text='这次没有生成出来。点击「重试联想」，也可以继续种下其他词。';
-  else text='至少两个词已经种下。等菌丝相遇，新想法会慢慢出现；也可以继续点击空白处添加词。';
+  else text='已经种下几个词了。可以先观察菌丝相遇、产生新想法，也可以继续添加词。';
+  if(seeds>=5) text+=' 已经种下不少词，可以先等等，观察它们生长。';
   document.querySelector('#guide').textContent=text;
 }
 
@@ -53,8 +63,23 @@ function addFronts(node, count = 5) {
   }
 }
 
+function guideNewSeed(node) {
+  // Steer one additional strand toward a nearby, already visible strand.
+  let target=null;
+  for(const cell of occupied.values()) for(const point of cell) {
+    const other=nodes[point.source];
+    if(!other || other===node || other.failed) continue;
+    const distance=Math.hypot(point.x-node.x,point.y-node.y);
+    if(distance<35 || distance>150 || distance>growthRange(node,point.x,point.y,nextTrace)*.9 || !hasRoomForIdea(point.x,point.y,node,other)) continue;
+    if(!target || distance<target.distance) target={...point,distance};
+  }
+  if(!target) return;
+  fronts.push({x:node.x,y:node.y,a:Math.atan2(target.y-node.y,target.x-node.x),
+    source:node.id,age:0,speed:1.15,depth:0,branches:0,trace:nextTrace++,lastJoin:-30,target});
+}
+
 function addNode(x, y, word, child = false, roots = null, waitForIdea = false) {
-  const node = {id:nodes.length, x, y, word, child, roots:roots || [word], color:child?'#eac293':colors[nodes.length % colors.length], born:simTime, pending:waitForIdea};
+  const node = {id:nodes.length, x, y, word, child, roots:roots || [word], color:child?'#b15d43':colors[nodes.length % colors.length], born:simTime, pending:waitForIdea};
   nodes.push(node);
   const el = document.createElement('div');
   el.className = 'spore' + (child ? ' child' : '');
@@ -95,6 +120,21 @@ function showIdea(node) {
   document.querySelector('#idea-card').hidden=false;
 }
 
+async function reserveIdeaDisplay(node) {
+  while(nodes[node.id]===node){
+    const now=performance.now();
+    const wait=node.manualTriggered
+      ? node.triggeredAt+1700-now
+      : Math.max(lastPlantAt+1700-now,lastAutoShownAt+nextAutoDelay-now);
+    if(wait<=0){
+      if(!node.manualTriggered){lastAutoShownAt=performance.now();nextAutoDelay=8000+Math.random()*4000;}
+      return true;
+    }
+    await new Promise(resolve=>setTimeout(resolve,Math.min(wait,500)));
+  }
+  return false;
+}
+
 function requestIdea(node) {
   if(node.description){node.previousWords=node.previousWords||[];node.previousWords.push(node.word);}
   node.revision=(node.revision||0)+1;
@@ -103,17 +143,17 @@ function requestIdea(node) {
   node.el.querySelector('label').textContent = '等待联想…';
   updateGuide();
   if(selectedIdea===node){document.querySelector('#idea-description').textContent='正在尝试另一种组合…';document.querySelector('#regenerate').disabled=true;}
-  ideaQueue = ideaQueue.catch(()=>{}).then(async()=>{
+  (async()=>{
     if (nodes[node.id]!==node) return;
     node.el.querySelector('label').textContent='菌落生长中…';
-    const waiting=nodes.filter(n=>n.pending && n!==node).length+collisionQueue.length;
-    updateStatus(waiting ? `菌落生长中 · ${waiting} 个想法等待中` : '菌落生长中…');
+    const growing=nodes.filter(n=>n.pending).length;
+    updateStatus(growing > 1 ? `菌落生长中 · ${growing} 个新念头正在萌发` : '菌落生长中…');
     try {
       const existingNames=[...nodes.filter(n=>n!==node&&!n.pending&&!n.failed).map(n=>n.word),...(node.previousWords||[])].slice(-20);
       const response = await fetch('/api/idea', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({words:node.inputs,existingNames,variation:node.variation})});
       const data = await response.json();
       if (!response.ok || !data.name || !data.idea) throw new Error(data.error || '本地模型没有响应');
-      if (nodes[node.id]!==node) return;
+      if (!await reserveIdeaDisplay(node) || nodes[node.id]!==node) return;
       node.word=data.name;node.description=data.idea;node.pending=false;node.autoAttempts=0;node.el.querySelector('label').textContent=data.name;
       positionLabel(node);
       updateGuide();
@@ -139,47 +179,79 @@ function requestIdea(node) {
     } finally {
       if(nodes[node.id]===node) pumpCollisions();
     }
-  });
+  })();
 }
 
 function distanceToNearestNode(x,y) {
   return nodes.reduce((closest,node)=>Math.min(closest,Math.hypot(node.x-x,node.y-y)),Infinity);
 }
 
-function hasRoomForIdea(x,y) {
-  const minimum=Math.max(60,Math.min(120,Math.min(w,h)*.14));
-  return distanceToNearestNode(x,y)>=minimum;
+function hasRoomForIdea(x,y,a,b) {
+  // Allow a genuine crossing near its two parents, while keeping other labels apart.
+  return nodes.every(node=>Math.hypot(node.x-x,node.y-y)>=(node===a||node===b?24:45));
 }
 
 function meet(sourceA, sourceB, x, y) {
   if (sourceA === sourceB) return;
   const a = nodes[sourceA], b = nodes[sourceB];
-  if (!a || !b || a.pending || b.pending || a.failed || b.failed) return;
+  if (!a || !b || a.failed || b.failed) return;
   const key = [a.id,b.id].sort((x,y)=>x-y).join(':');
   if (encounters.has(key) || queuedPairs.has(key)) return;
-  if (a.parents?.includes(b.id) || b.parents?.includes(a.id)) return;
-  if (!hasRoomForIdea(x,y)) return;
-  if (collisionQueue.length>=3) return;
+  if (!hasRoomForIdea(x,y,a,b)) return;
+  if (collisionQueue.length>=12) {
+    const recentSeed=nodes.filter(n=>n.manualSeed && simTime-n.born<30000).at(-1);
+    if(!recentSeed || (a!==recentSeed && b!==recentSeed)) return;
+    const replace=collisionQueue.findIndex(item=>item.a!==recentSeed && item.b!==recentSeed);
+    if(replace<0) return;
+    queuedPairs.delete(collisionQueue[replace].key);
+    collisionQueue.splice(replace,1);
+  }
   queuedPairs.add(key);
-  collisionQueue.push({a,b,x,y,key});
+  const recentSeed=nodes.filter(n=>n.manualSeed && simTime-n.born<30000).at(-1);
+  const manualTriggered=!!(recentSeed && (a===recentSeed || b===recentSeed) && !recentSeed.priorityUsed);
+  collisionQueue.push({a,b,x,y,key,manualTriggered,triggeredAt:manualTriggered?recentSeed.plantedAt:null});
+  if(manualTriggered){
+    recentSeed.priorityUsed=true;
+    nextBirthAt=Math.min(nextBirthAt,Math.max(simTime+300,recentSeed.born+1000));
+  }
   pumpCollisions();
 }
 
 function pumpCollisions() {
-  while(running && simTime>=nextBirthAt && collisionQueue.length && nodes.filter(n=>n.pending).length<1){
-    collisionQueue.sort((a,b)=>distanceToNearestNode(b.x,b.y)-distanceToNearestNode(a.x,a.y));
-    const {a,b,x,y,key}=collisionQueue.shift();
+  while(running && performance.now()-lastPlantAt>=1000 && simTime>=nextBirthAt && collisionQueue.length && nodes.filter(n=>n.pending).length<3){
+    // Keep intersections involving an unnamed colony until its idea arrives.
+    collisionQueue=collisionQueue.filter(item=>{
+      const valid=nodes[item.a.id]===item.a && nodes[item.b.id]===item.b && !item.a.failed && !item.b.failed && !encounters.has(item.key);
+      if(!valid) queuedPairs.delete(item.key);
+      return valid;
+    });
+    if(!collisionQueue.length) break;
+    // Give a recently planted word a chance to connect before older colonies.
+    collisionQueue.sort((a,b)=>{
+      return Number(b.manualTriggered)-Number(a.manualTriggered) || distanceToNearestNode(b.x,b.y)-distanceToNearestNode(a.x,a.y);
+    });
+    const ready=collisionQueue.findIndex(item=>!item.a.pending && !item.b.pending);
+    if(ready<0) break;
+    const {a,b,x,y,key,manualTriggered,triggeredAt}=collisionQueue.splice(ready,1)[0];
     queuedPairs.delete(key);
-    if(nodes[a.id]!==a || nodes[b.id]!==b || a.pending || b.pending || a.failed || b.failed || encounters.has(key) || !hasRoomForIdea(x,y)) continue;
+    if(nodes[a.id]!==a || nodes[b.id]!==b || a.pending || b.pending || a.failed || b.failed || encounters.has(key) || !hasRoomForIdea(x,y,a,b)) continue;
     encounters.add(key);
     const roots=[...new Set([...a.roots,...b.roots])];
     const child=addNode(x,y,'等待联想…',true,roots,true);
+    const core=child.el.querySelector('.core');
+    const revealCore=()=>{
+      if(nodes[child.id]!==child) return;
+      const wait=1700-(performance.now()-lastPlantAt);
+      if(wait>0){core.style.visibility='hidden';setTimeout(revealCore,wait);}
+      else core.style.visibility='';
+    };
+    revealCore();
     child.parents=[a.id,b.id];
     child.inputs=[a.word,b.word];
-    addFronts(child,3);
-    child.hasGrowth=true;
+    child.manualTriggered=manualTriggered;child.triggeredAt=triggeredAt;
+    // The new colony starts growing when its generated word is revealed.
     updateStatus(`「${a.word}」和「${b.word}」相遇，菌落生长中…`);
-    nextBirthAt=simTime+10000;
+    nextBirthAt=simTime+8000+Math.random()*4000;
     requestIdea(child);
   }
 }
@@ -188,10 +260,11 @@ function sense(front) {
   const cx = Math.floor(front.x / 10), cy = Math.floor(front.y / 10);
   let connection=null;
   for (let dx=-2;dx<=2;dx++) for(let dy=-2;dy<=2;dy++) {
-    const other=occupied.get(`${cx+dx},${cy+dy}`);
-    if(!other||other.source!==front.source||other.trace===front.trace)continue;
-    const distance=Math.hypot(other.x-front.x,other.y-front.y);
-    if(distance>7&&distance<25&&(!connection||distance<connection.distance))connection={...other,distance};
+    for(const other of occupied.get(`${cx+dx},${cy+dy}`)||[]){
+      if(other.source!==front.source||other.trace===front.trace)continue;
+      const distance=Math.hypot(other.x-front.x,other.y-front.y);
+      if(distance>7&&distance<25&&(!connection||distance<connection.distance))connection={...other,distance};
+    }
   }
   if(connection && front.age-front.lastJoin>16 && Math.random()<.22){
     front.lastJoin=front.age;
@@ -202,12 +275,19 @@ function sense(front) {
     veinCtx.stroke();veinCtx.globalAlpha=1;
   }
   for (let dx=-1; dx<=1; dx++) for (let dy=-1; dy<=1; dy++) {
-    const other = occupied.get(`${cx+dx},${cy+dy}`);
-    if (front.age>12 && other && other.source!==front.source && Math.hypot(other.x-front.x,other.y-front.y)<8) {
-      meet(front.source, other.source, (other.x+front.x)/2, (other.y+front.y)/2);
+    for(const other of occupied.get(`${cx+dx},${cy+dy}`)||[]) {
+      if (front.age>12 && other.source!==front.source && Math.hypot(other.x-front.x,other.y-front.y)<8) {
+        meet(front.source, other.source, (other.x+front.x)/2, (other.y+front.y)/2);
+      }
     }
   }
-  occupied.set(`${cx},${cy}`, {x:front.x,y:front.y,source:front.source,trace:front.trace});
+  const cellKey=`${cx},${cy}`;
+  const cell=occupied.get(cellKey)||[];
+  const point={x:front.x,y:front.y,source:front.source,trace:front.trace};
+  const existing=cell.findIndex(item=>item.source===front.source);
+  if(existing>=0) cell[existing]=point;
+  else if(cell.length<20) cell.push(point);
+  occupied.set(cellKey,cell);
 }
 
 function growthRange(node,x,y,trace) {
@@ -221,6 +301,7 @@ function grow() {
   for (const p of fronts) {
     if (p.age > (p.depth===0?320:180) || p.x<4 || p.y<4 || p.x>w-4 || p.y>h-4) continue;
     const source = nodes[p.source];
+    if(source.child && performance.now()-lastPlantAt<1700){next.push(p);continue;}
     const range=growthRange(source,p.x,p.y,p.trace);
     const top=135+14*Math.sin(p.x*.035)+7*Math.sin(p.x*.1);
     const bottom=h-90+12*Math.sin(p.x*.028+1)+6*Math.sin(p.x*.085);
@@ -232,20 +313,30 @@ function grow() {
       if (d<dist) {nearest=node;dist=d;}
     }
     p.a += (Math.random()-.5)*.09;
-    if (nearest && dist<400 && p.depth===0) {
+    if(p.target && nodes[p.target.source]){
+      p.a=Math.atan2(p.target.y-p.y,p.target.x-p.x);
+    } else if (nearest && dist<400 && p.depth===0) {
       const direction = Math.atan2(nearest.y-p.y,nearest.x-p.x);
       const turn = Math.atan2(Math.sin(direction-p.a),Math.cos(direction-p.a));
       p.a += Math.max(-.009,Math.min(.009,turn))*(dist<180?.8:.4);
     }
     const ox=p.x, oy=p.y;
     p.x += Math.cos(p.a)*p.speed; p.y += Math.sin(p.a)*p.speed; p.age++;
-    veinCtx.strokeStyle=source.color; veinCtx.globalAlpha=[.77,.62,.48,.38,.28][p.depth];
-    veinCtx.lineWidth=[2.5,1.45,.95,.62,.38][p.depth]; veinCtx.lineCap='round';
-    veinCtx.beginPath(); veinCtx.moveTo(ox,oy); veinCtx.lineTo(p.x,p.y); veinCtx.stroke(); veinCtx.globalAlpha=1;
+    const taper=Math.max(.55,1-p.age/(p.depth===0?500:300));
+    const width=[1.9,1.2,.82,.58,.42][p.depth]*taper;
+    veinCtx.strokeStyle=source.color; veinCtx.lineCap='round'; veinCtx.lineJoin='round';
+    veinCtx.beginPath(); veinCtx.moveTo(ox,oy); veinCtx.lineTo(p.x,p.y);
+    veinCtx.globalAlpha=[.10,.095,.09,.085,.08][p.depth]; veinCtx.lineWidth=width+1.4; veinCtx.stroke();
+    veinCtx.globalAlpha=[.55,.52,.49,.46,.43][p.depth]*(.9+.1*taper); veinCtx.lineWidth=width; veinCtx.stroke();
+    veinCtx.globalAlpha=1;
     sense(p);
+    if(p.target && Math.hypot(p.target.x-p.x,p.target.y-p.y)<4){
+      meet(p.source,p.target.source,(p.x+p.target.x)/2,(p.y+p.target.y)/2);
+      p.target=null;
+    }
     if (p.depth<4 && p.age>15 && p.age<160 && p.branches<4 && Math.random()<.03 && fronts.length+next.length<380) {
       p.branches++;
-      next.push({...p,a:p.a+(Math.random()<.5?-1:1)*(.3+Math.random()*.45),age:0,depth:p.depth+1,branches:0,speed:p.speed*(.9+Math.random()*.1),trace:nextTrace++,lastJoin:-30});
+      next.push({...p,a:p.a+(Math.random()<.5?-1:1)*(.3+Math.random()*.45),age:0,depth:p.depth+1,branches:0,speed:p.speed*(.9+Math.random()*.1),trace:nextTrace++,lastJoin:-30,target:null});
     }
     next.push(p);
   }
@@ -292,7 +383,7 @@ function drawColony(node,time){
       ctx.quadraticCurveTo(node.x+p[0]*progress,node.y+p[1]*progress,node.x+(p[0]+q[0])*progress/2,node.y+(p[1]+q[1])*progress/2);
     }
     const last=pts.at(-1);ctx.lineTo(node.x+last[0]*progress,node.y+last[1]*progress);
-    ctx.strokeStyle=node.child?'#f0c89c':'#dbe9a8';
+    ctx.strokeStyle=node.child?'#b15d43':'#52745b';
     ctx.globalAlpha=[.72,.55,.42,.3][strand.depth];
     ctx.lineWidth=[1.5,1.05,.72,.48][strand.depth];
     ctx.stroke();
@@ -317,8 +408,8 @@ function drawLink(link,time) {
       const y=u*u*u*source.y+3*u*u*t*y1+3*u*t*t*y2+t*t*t*child.y;
       ctx.lineTo(x,y);
     }
-    ctx.strokeStyle='#e5e9a568';ctx.lineWidth=2.4;ctx.stroke();
-    ctx.strokeStyle='#f1efc6a0';ctx.lineWidth=.7;ctx.stroke();
+    ctx.strokeStyle='#82968168';ctx.lineWidth=2.4;ctx.stroke();
+    ctx.strokeStyle='#526e5aa0';ctx.lineWidth=.7;ctx.stroke();
   }
 }
 
@@ -330,8 +421,8 @@ function render(time) {
     grow();
     frame++;
   }
-  ctx.fillStyle='#101610';ctx.fillRect(0,0,w,h);
-  ctx.drawImage(veins,0,0);
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);
+  ctx.drawImage(veins,0,0,w,h);
   ctx.globalAlpha=1;
   requestAnimationFrame(render);
 }
@@ -340,12 +431,15 @@ canvas.addEventListener('click', e=>{pending={x:e.clientX,y:e.clientY};input.val
 document.querySelector('#form').addEventListener('submit', e=>{
   if (e.submitter?.value==='cancel') return;
   const word=input.value.trim();if (!word || !pending){e.preventDefault();return;}
-  addNode(pending.x,pending.y,word);pending=null;running=true;document.querySelector('#pause').textContent='暂停生长';
+  lastPlantAt=performance.now();
+  const planted=addNode(pending.x,pending.y,word);planted.manualSeed=true;planted.plantedAt=lastPlantAt;guideNewSeed(planted);pending=null;running=true;document.querySelector('#pause').textContent='暂停生长';
+  nextBirthAt=simTime+1000;
 });
 document.querySelector('#cancel').onclick=()=>{pending=null;editor.close();};
 document.querySelector('#pause').onclick=e=>{running=!running;e.currentTarget.textContent=running?'暂停生长':'继续生长';updateStatus(running?'正在生长':'已暂停');};
 document.querySelector('#clear').onclick=()=>{
   nodes.forEach(n=>n.el.remove());nodes=[];fronts=[];links=[];collisionQueue=[];queuedPairs.clear();simTime=0;nextBirthAt=0;occupied.clear();encounters.clear();
+  lastAutoShownAt=-Infinity;nextAutoDelay=0;lastPlantAt=-Infinity;
   document.querySelector('#retry').hidden=true;
   document.querySelector('#idea-card').hidden=true;
   selectedIdea=null;
