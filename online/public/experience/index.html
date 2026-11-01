@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>念头培养皿 · 小演示</title>
+  <style>
+    :root{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;color:#e8e8d7;background:#101610}
+    *{box-sizing:border-box} body{margin:0;overflow:hidden} canvas{position:fixed;inset:0;width:100%;height:100%;cursor:crosshair}
+    .grain{position:fixed;inset:0;pointer-events:none;opacity:.15;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.3'/%3E%3C/svg%3E")}
+    header{position:fixed;top:24px;left:30px;z-index:3;max-width:390px;pointer-events:none} .eyebrow{font:11px/1.4 ui-monospace,monospace;letter-spacing:.22em;color:#93ad79;text-transform:uppercase} h1{font-size:clamp(28px,4vw,52px);letter-spacing:-.07em;margin:8px 0 5px;font-weight:500} .desc{font-size:13px;line-height:1.65;color:#a6b3a0;margin:0}
+    .toolbar{position:fixed;left:30px;bottom:28px;right:30px;display:flex;align-items:center;gap:9px;z-index:4;flex-wrap:wrap}button{border:1px solid #657661;background:#1e2b1e;color:#edf0dc;border-radius:999px;padding:10px 15px;cursor:pointer;font:12px/1.1 inherit;backdrop-filter:blur(10px)}button:hover{background:#344633}button.primary{background:#d3e387;color:#152015;border-color:#d3e387}.status{font:11px ui-monospace,monospace;color:#a4b69d;margin-left:auto}
+    .spore{position:fixed;z-index:2;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;min-width:80px}.spore .core{width:13px;height:13px;border-radius:50%;background:#e6ecac;box-shadow:0 0 0 6px #dcf38f19,0 0 22px 5px #c7dd7c99}.spore.child .core{background:#edbd8b;box-shadow:0 0 0 5px #edbd8b1c,0 0 18px #edbd8b88}.spore label{background:#192319dc;border:1px solid #66815b88;color:#edf1db;padding:7px 10px;border-radius:5px;font-size:12px;white-space:nowrap;box-shadow:0 4px 20px #0005}.spore.child label{color:#eccaa9;border-color:#a77b5b77}.spore small{color:#8da183;font:9px ui-monospace,monospace;letter-spacing:.1em}
+    .spore.child label,.spore.child small{transform:translate(var(--label-x,0px),var(--label-y,0px))}
+    .spore{transform:translate(-50%,-8px)}
+    .spore label{background:#101610b8;border:0;box-shadow:none;padding:4px 7px;font-size:13px;letter-spacing:.04em}.spore small{display:none}.spore .core{width:9px;height:9px;box-shadow:0 0 15px 3px #c7dd7c88}.spore.child .core{box-shadow:0 0 15px 3px #edbd8b77}
+    .hint{position:fixed;right:30px;top:30px;color:#8a9d85;font:11px ui-monospace,monospace;letter-spacing:.08em;z-index:2;text-align:right;line-height:1.7}
+    .idea-card{position:fixed;right:30px;top:105px;width:min(245px,32vw);padding:17px 18px;background:#172117e8;border:1px solid #71845b66;border-radius:8px;z-index:3;box-shadow:0 8px 32px #0004}.idea-card[hidden]{display:none}.idea-card .kicker{font:10px ui-monospace,monospace;letter-spacing:.16em;color:#9eb38a}.idea-card h2{font-size:16px;font-weight:500;color:#f0d3ae;margin:10px 0 8px}.idea-card p{font-size:12px;line-height:1.65;color:#c9d3be;margin:0}.idea-card small{display:block;margin-top:12px;font-size:10px;color:#8fa085;line-height:1.5}.idea-card button{margin-top:12px;padding:7px 11px;font-size:11px}.spore.child label{pointer-events:auto;cursor:pointer}.spore.child label:hover{color:#fff1d8}
+    dialog{border:1px solid #799069;background:#172217;color:#e9eedb;border-radius:12px;padding:22px;box-shadow:0 20px 80px #000a;width:min(340px,calc(100vw - 30px))}dialog::backdrop{background:#050a05a8;backdrop-filter:blur(3px)}dialog h2{font-size:19px;margin:0 0 7px;font-weight:500}dialog p{font-size:12px;color:#abbca3;margin:0 0 16px;line-height:1.5}input{width:100%;padding:11px;border-radius:6px;border:1px solid #708367;background:#0f190f;color:white;font:15px inherit;outline:none}input:focus{border-color:#d3e387}.formrow{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}
+    /* A warm, print-like palette inspired by the supplied slime-mould references. */
+    :root{color:#f1dfc7;background:#641e1b}
+    .grain{opacity:.26;mix-blend-mode:screen}
+    header{max-width:410px;text-shadow:0 1px 14px #41110e}
+    .eyebrow,.hint{color:#d2a47f}
+    h1{font-family:ui-serif,"Songti SC",serif;font-weight:500;letter-spacing:.035em;color:#f5e6d0}
+    .desc{color:#e5c7ae}
+    button{background:#5a211dba;border-color:#d1a38388;color:#f5e4d0}
+    button:hover{background:#83453a}
+    button.primary{background:#ddc5a0;border-color:#ddc5a0;color:#4d211b}
+    .status{color:#e4bea0}
+    .spore .core{background:#ead7ae;box-shadow:0 0 13px 3px #e8d19a88}
+    .spore.child .core{background:#a9dfb0;box-shadow:0 0 0 3px #a9dfb044,0 0 15px 4px #a9dfb088}
+    .spore label{background:#591b19bd;color:#fff0d8}
+    .spore.child label{color:#d7f5d7;background:#234d3de8;border:1px solid #a9dfb088;border-radius:4px}
+    .spore.child label:hover{color:#ffffff;background:#30644c}
+    .idea-card{background:#59201deF;border-color:#d3a38388}
+    .idea-card .kicker,.idea-card small{color:#d1a182}
+    .idea-card h2{color:#ffe3c3}.idea-card p{color:#edcfb9}
+    dialog{background:#5b2520;border-color:#d0a282;color:#f8e7d3}
+    dialog::backdrop{background:#270a09ab}
+    dialog p{color:#e2c2ab}
+    input{background:#401714;border-color:#bf9479;color:#fff0db}
+    input:focus{border-color:#f2d5ab}
+    :root{color:#26352d;background:#fff}
+    .grain{display:none}
+    header{text-shadow:none}
+    .eyebrow,.hint{color:#708176}
+    h1{color:#26352d}
+    .desc{color:#53665a}
+    button{background:#fffffff2;border-color:#bdc9bf;color:#34483a}
+    button:hover{background:#eef3ed}
+    button.primary{background:#405f4d;border-color:#405f4d;color:white}
+    .status{color:#64786a}
+    .spore .core{background:#476d55;box-shadow:0 0 0 3px #476d5526,0 0 12px 2px #476d5544}
+    .spore label{background:#fffffff0;color:#334d3b}
+    .spore.child .core{background:#b15d43;box-shadow:0 0 0 3px #b15d4326,0 0 12px 3px #b15d4355}
+    .spore.child label{color:#913f2b;background:#fff8f3ef;border-color:#c77c604d}
+    .spore.child label:hover{color:#772d1e;background:#fff1e9}
+    .idea-card{background:#fffffff5;border-color:#c7d3c7;box-shadow:0 8px 32px #304a321a}
+    .idea-card .kicker,.idea-card small{color:#708176}
+    .idea-card h2{color:#974d36}.idea-card p{color:#53665a}
+    dialog{background:#fff;border-color:#bdc9bf;color:#26352d}
+    dialog::backdrop{background:#26382d55}
+    dialog p{color:#64786a}
+    input{background:#fff;border-color:#bdc9bf;color:#26352d}
+    input:focus{border-color:#567763}
+    /* Night specimen: dark ground with softly luminous strands. */
+    :root{color:#eef1df;background:#090d0b}
+    .grain{display:none} header{text-shadow:none}
+    .eyebrow,.hint{color:#a7b9a6} h1{color:#f0f2e6} .desc{color:#bccabe}
+    button{background:#151e19ef;border-color:#6b8270;color:#e5eee4}
+    button:hover{background:#263a2d} button.primary{background:#d2e3bc;border-color:#d2e3bc;color:#1a2a1d}
+    .status{color:#b5c9b5}
+    .spore .core{background:#e1f2d3;box-shadow:0 0 0 3px #c8eac633,0 0 14px 4px #b6e6c499}
+    .spore label{background:#0b140fed;color:#e4f1e0}
+    .spore.child .core{background:#ffd7a9;box-shadow:0 0 0 3px #ffd7a933,0 0 16px 5px #efbd8b99}
+    .spore.child label{color:#ffdbb4;background:#21180fed;border-color:#e9b98977}
+    .spore.child label:hover{color:#fff4df;background:#3a291a}
+    .idea-card{background:#101a14f5;border-color:#829c82aa;box-shadow:0 10px 35px #0008}
+    .idea-card .kicker,.idea-card small{color:#a7bea5} .idea-card h2{color:#ffdfbc}.idea-card p{color:#d0ded0}
+    dialog{background:#152018;border-color:#819c83;color:#edf4e8}dialog::backdrop{background:#000b}
+    dialog p{color:#c0d0bd} input{background:#0a130e;border-color:#718b75;color:#f1f8ee}input:focus{border-color:#d6edc6}
+    .language{position:fixed;right:30px;top:24px;z-index:5;letter-spacing:.04em}
+    .hint{top:80px}
+    @media(max-width:600px){header{top:18px;left:18px;right:90px}.hint{display:none}.language{right:18px;top:18px}.toolbar{left:18px;bottom:18px;right:18px}.status{width:100%;margin:2px 0 0}.spore label{font-size:11px}.idea-card{top:auto;bottom:115px;right:18px;width:min(240px,55vw);padding:12px}}
+  </style>
+</head>
+<body>
+  <canvas id="world" aria-label="会生长的想法培养皿"></canvas><div class="grain"></div>
+  <header><div class="eyebrow">IDEA CULTURE / 01</div><h1 id="heading">念头培养皿</h1><p class="desc" id="intro" style="margin-bottom:8px">它们会生长，寻找别的词，并在相遇时繁衍出你意想不到的新念头。</p><p class="desc" id="guide" aria-live="polite">点击画面空白处，输入一个词并点「种下」；然后点击附近的另一处空白，输入并种下第二个词。建议先种下 2—3 个词，观察它们生长。</p><p class="desc" id="privacy" style="margin-top:8px;font-size:11px">输入的词会发送至 Google Gemini 生成联想，请勿输入私人信息。</p></header>
+  <button class="language" id="language" type="button" aria-label="Switch language">EN / 中文</button>
+  <div class="hint">CLICK TO PLANT<br>WATCH THEM GROW</div>
+  <aside class="idea-card" id="idea-card" hidden aria-live="polite"><div class="kicker">A NEW IDEA</div><h2 id="idea-title"></h2><p id="idea-description"></p><small id="idea-origin"></small><button id="regenerate" type="button">换个想法</button></aside>
+  <div class="toolbar"><button class="primary" id="example">种下示例</button><button id="pause">暂停生长</button><button id="clear">清空培养皿</button><button id="retry" hidden>重试联想</button><span class="status" id="status" role="status">等待第一颗孢子</span></div>
+  <dialog id="editor"><form method="dialog" id="form"><h2 id="editor-title">种下一颗念头</h2><p id="editor-help">输入一个词或短句，然后点击「种下」。可以是日常事物，也可以是抽象概念，比如拓扑、量子或自由。</p><input id="idea" maxlength="24" placeholder="例如：雨天、拓扑、量子…" autocomplete="off" required><div class="formrow"><button value="cancel" type="button" id="cancel">取消</button><button class="primary" id="plant" value="plant" type="submit">种下</button></div></form></dialog>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,6 +1,10 @@
 # Idea Culture / 念头培养皿
 
-An interactive artwork for people exploring unfamiliar connections between ideas. Plant words on a digital petri dish and watch slime-mould-inspired networks grow. When networks meet, a local language model proposes a new idea at the intersection; that colony can grow in turn.
+An interactive artwork for people exploring unfamiliar connections between ideas. Plant words on a digital petri dish and watch slime-mould-inspired networks grow. When networks meet, a language model proposes a new idea at the intersection; that colony can grow in turn.
+
+**Online version:** [Open Idea Culture](https://idea-culture-living-thoughts.dustycorgi1.chatgpt.site/). The online version uses Google Gemini to generate associations without installing Ollama. The author confirmed the page opened and produced an idea. Availability can vary by network: an automated check was blocked by the hosting service's security layer. If the link is unavailable, the demonstration below and local version remain available.
+
+The words entered online are sent to Google Gemini; please do not enter private information. Online generation is subject to service availability and the account's usage limits. The provider key is stored as a server secret, not in this repository.
 
 ![Idea Culture screenshot showing seed words, growing hyphae and generated associations](screenshot.png)
 
@@ -27,9 +31,11 @@ uv run --no-project python server.py
 
 Open <http://127.0.0.1:8768/>. Stop the server with Ctrl+C. Input is sent to Ollama on your own computer, not to a cloud API. Download size and generation speed depend on the machine; a GPU is helpful but not required. If the page reports that the local model is unavailable, start Ollama, check that `ollama list` includes `qwen3:8b`, and select **重试联想** (retry). If port 8768 is already in use, stop the other application using it before starting this server.
 
+The key online files can be read in [online/](online/), and the complete hosted application source is included in [online-source.zip](online-source.zip). Its `public/experience/` folder contains the online interface and `app/api/idea/route.ts` contains the server-side Google Gemini integration. The secret is not included. The root files and commands above remain the self-contained local Ollama version.
+
 ## Limitations
 
-This is a local prototype: GitHub Pages cannot run its Python server or local model. The model may take time, fail, or produce weak associations. If the service is unavailable, users can plant and watch networks grow, but new associations require Ollama. The screenshot and recording above show a run without needing the model. In another test, “雨天” (rainy day) and “拓扑” (topology) produced “液态几何” (liquid geometry), with the idea that raindrops redefine the shape of space. Outputs vary between runs.
+The local version requires Ollama, and GitHub Pages cannot run its Python server or local model. The online version requires a reachable hosted service and Google Gemini. Either model may take time, fail, or produce weak associations. If the service is unavailable, users can plant and watch networks grow, but new associations require a working model. The screenshot and recording above show a run without needing the model. In another test, “雨天” (rainy day) and “拓扑” (topology) produced “液态几何” (liquid geometry), with the idea that raindrops redefine the shape of space. Outputs vary between runs.
 
 ## Credits
 
