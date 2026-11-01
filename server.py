@@ -55,6 +55,9 @@ class Handler(SimpleHTTPRequestHandler):
             variation = body.get('variation', '视角反转')
             if variation not in VARIATIONS:
                 return self.respond(400, {'error': '组合方式不正确'})
+            language = body.get('language', 'zh')
+            if language not in ('zh', 'en'):
+                return self.respond(400, {'error': '语言设置不正确'})
             fields = ['source_a', 'source_b', 'change', 'idea', 'name']
             request_data = {
                 'model': MODEL, 'stream': False, 'think': False,
@@ -73,6 +76,8 @@ class Handler(SimpleHTTPRequestHandler):
                         {'role': 'user', 'content': '词语：' + json.dumps(words, ensure_ascii=False) + '\n方向：' + VARIATIONS[variation] + '\n名称不要包含任何完整输入词。\n已有名称：' + json.dumps(used, ensure_ascii=False)},
                     ]
                     request_data['options']['num_predict'] = 200
+                if language == 'en':
+                    request_data['messages'].append({'role': 'user', 'content': 'Write every JSON value in natural English, including the short name and the idea. Keep spaces between English words. Do not simply copy the input words into the name.'})
                 req = urllib.request.Request('http://127.0.0.1:11434/api/chat', json.dumps(request_data, ensure_ascii=False).encode('utf-8'), {'Content-Type': 'application/json'})
                 with urllib.request.urlopen(req, timeout=90) as response:
                     result = json.load(response)
@@ -84,18 +89,18 @@ class Handler(SimpleHTTPRequestHandler):
                     continue
                 name = decoded.get('name', '').strip().strip('“”"\'。！! ')
                 idea = decoded.get('idea', '').strip()
-                name = re.sub(r'\s+', '', name)
+                name = re.sub(r'\s+', ' ' if language == 'en' else '', name)
                 # Reject two-character names made solely by taking one character from each input.
                 fragments = (len(name) == 2 and
                              ((name[0] in words[0] and name[1] in words[1]) or
                               (name[0] in words[1] and name[1] in words[0])))
-                copied_edge = any(2 <= len(word.strip()) <= 8 and word.strip() in name
+                copied_edge = any(2 <= len(word.strip()) <= (24 if language == 'en' else 8) and word.strip().casefold() in name.casefold()
                                   for word in words)
                 banned = ['暖咖', '暖心', '暖眠', '治愈', '疗愈', '温馨', '梦境', '心灵', '庇护所', '避难所', '咖啡馆']
                 generic = any(term in name and all(term not in word for word in words) for term in banned)
                 generic = generic or ('悖论' in name and all('悖论' not in word for word in words))
                 placeholder = any(s in name+idea for s in ['...', '……', '示例', '字数要求', '请输入'])
-                valid = 2 <= len(name) <= 18 and ('的' not in name or attempt >= 1) and 8 <= len(idea) <= 120 and not re.search(r'[\n\r+→{}\[\]]', name) and not generic and not placeholder and not fragments and not copied_edge
+                valid = 2 <= len(name) <= (60 if language == 'en' else 18) and ('的' not in name or attempt >= 1) and 8 <= len(idea) <= (240 if language == 'en' else 120) and not re.search(r'[\n\r+→{}\[\]]', name) and not generic and not placeholder and not fragments and not copied_edge
                 if valid and name not in used and name not in words:
                     return self.respond(200, {'name': name, 'idea': idea})
                 request_data['messages'].append({'role': 'user', 'content': '上一个结果重复、空泛、只是拼接输入词，或格式不合适。名称中不要直接出现完整输入词。重新构思一个体现概念关联的新联想，可以是概念、画面、行为或假设；避免总写悖论和问题，不要堆砌形容词。请返回 JSON。'})

@@ -20,6 +20,8 @@ While exploring the work myself, I noticed that entering more abstract or academ
 
 I tried a dark red, print-inspired version, but preferred a clean white background. In the white version, planted words and their threads are green and generated colonies are reddish brown. I increased the rendering resolution for clearer detail, then softened the lines and made finer strands slightly more transparent so they would not look too hard.
 
+After reviewing the white version, I chose a black background with pale, softly glowing strands. I also added an English/Chinese language switch so an English-speaking user can follow the controls and generate ideas in English. Existing words are not automatically translated. I recorded a new demonstration in the English interface to show this later version.
+
 I adjusted the pace several times. A new user-planted word receives priority for one association after it meets another colony, with a minimum 1.7-second delay before the result appears. Automatically generated ideas are spaced roughly 8–12 seconds apart. Actual timing depends on growth and the local model. I also fixed an issue where newly planted words could miss encounters with older threads, and added guidance for abstract inputs such as topology.
 
 The associations sometimes repeated “paradox”, simply combined characters (such as 雨拓), or kept reusing an input word in every name. I revised the model instructions and added checks to reduce these patterns. The results can still be repetitive or disappointing, and the checks can cause retries or failures; the name “水拓时刻” in one test still felt too close to the input. This remains an area to improve.
@@ -30,4 +32,8 @@ I used OpenAI Codex to help develop the interface, growth behaviour, local model
 
 ## Next steps
 
-Retest the revised instructions and pacing; add a screen recording to show the animation for markers who cannot run the local model. The README includes a screenshot and a recorded sample output. This repository begins with a snapshot of an existing local prototype, so earlier design iterations are described above rather than represented as Git commits.
+Retest the revised instructions and pacing with a participant. The README includes a screenshot, a silent recording of an actual example run, and a sample output for markers who cannot run the local model. This repository begins with a snapshot of an existing local prototype, so earlier design iterations are described above rather than represented as Git commits.
+
+## Checks before submission
+
+I started a fresh copy with the documented `uv` command, using a different local port because the preview was already running. The page loaded and a real local-model request returned an association. I also simulated Ollama being unavailable: the server returned a 503 response with a message explaining that the local model did not respond. The interface provides a retry control. The public repository was reachable without GitHub credentials. These checks do not replace a new participant test or guarantee every model response succeeds.

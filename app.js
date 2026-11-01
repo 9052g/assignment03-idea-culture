@@ -15,8 +15,10 @@ let nextBirthAt = 0;
 let lastPlantAt = -Infinity;
 let lastAutoShownAt = -Infinity, nextAutoDelay = 0;
 let selectedIdea = null;
+let language = 'zh';
+const tr=(zh,en)=>language==='en'?en:zh;
 const variations=['画面','日常错位','假设','隐喻','规则','视角反转','提问'];
-const colors = ['#52745b', '#68846a', '#738b6e', '#547968', '#84966f'];
+const colors = ['#d5ecd1', '#c6e8d2', '#e0efd1', '#bddfc4', '#e1eacb'];
 
 function size() {
   w = innerWidth; h = innerHeight; dpr = Math.min(devicePixelRatio || 1, 2);
@@ -31,25 +33,25 @@ function size() {
 }
 
 function updateStatus(message) {
-  status.textContent = message || `${nodes.filter(n => !n.child).length} 颗种子 · ${nodes.filter(n => n.child).length} 个新念头`;
+  status.textContent = message || tr(`${nodes.filter(n => !n.child).length} 颗种子 · ${nodes.filter(n => n.child).length} 个新念头`,`${nodes.filter(n => !n.child).length} seeds · ${nodes.filter(n => n.child).length} new ideas`);
 }
 
 function updateGuide() {
   const seeds=nodes.filter(n=>!n.child).length;
   const ideas=nodes.filter(n=>n.child);
   let text;
-  if(seeds===0) text='点击画面空白处，输入一个词并点「种下」；然后点击附近的另一处空白，输入并种下第二个词。建议先种下 2—3 个词，观察它们生长。';
-  else if(seeds===1) text='第一个词已经种下。请点击画面附近的另一处空白，输入并种下第二个词；两株菌丝相遇后会产生新想法。';
+  if(seeds===0) text=tr('点击画面空白处，输入一个词并点「种下」；然后点击附近的另一处空白，输入并种下第二个词。建议先种下 2—3 个词，观察它们生长。','Click the canvas and plant a word. Click another nearby spot to plant a second. Start with 2–3 words and watch them grow.');
+  else if(seeds===1) text=tr('第一个词已经种下。请点击画面附近的另一处空白，输入并种下第二个词；两株菌丝相遇后会产生新想法。','Your first word is planted. Click another nearby spot and plant a second; their meeting can create a new idea.');
   else if(seeds===2) {
-    text='第二个词已经种下。再点击附近另一处空白，输入并种下第三个词；你也可以等待菌丝相遇，看看会长出什么。';
-    if(ideas.some(n=>n.failed)) text+=' 如果联想失败，可以点击「重试联想」。';
-    else if(ideas.some(n=>n.description)) text+=' 点击新念头可以查看内容。';
+    text=tr('第二个词已经种下。再点击附近另一处空白，输入并种下第三个词；你也可以等待菌丝相遇，看看会长出什么。','Your second word is planted. Add a third nearby, or wait for the strands to meet.');
+    if(ideas.some(n=>n.failed)) text+=tr(' 如果联想失败，可以点击「重试联想」。',' If generation fails, select Retry.');
+    else if(ideas.some(n=>n.description)) text+=tr(' 点击新念头可以查看内容。',' Click a new idea to explore it.');
   }
-  else if(ideas.some(n=>n.description)) text='新想法已经长出。点击新词查看内容，也可以继续点击空白处种下其他词。';
-  else if(ideas.some(n=>n.pending)) text='菌丝相遇了，新想法正在生长。等一等，也可以继续点击空白处种词。';
-  else if(ideas.some(n=>n.failed)) text='这次没有生成出来。点击「重试联想」，也可以继续种下其他词。';
-  else text='已经种下几个词了。可以先观察菌丝相遇、产生新想法，也可以继续添加词。';
-  if(seeds>=5) text+=' 已经种下不少词，可以先等等，观察它们生长。';
+  else if(ideas.some(n=>n.description)) text=tr('新想法已经长出。点击新词查看内容，也可以继续点击空白处种下其他词。','A new idea has grown. Click it to read more, or plant another word.');
+  else if(ideas.some(n=>n.pending)) text=tr('菌丝相遇了，新想法正在生长。等一等，也可以继续点击空白处种词。','The strands have met and an idea is growing. Wait, or plant another word.');
+  else if(ideas.some(n=>n.failed)) text=tr('这次没有生成出来。点击「重试联想」，也可以继续种下其他词。','The idea could not be generated. Select Retry, or plant another word.');
+  else text=tr('已经种下几个词了。可以先观察菌丝相遇、产生新想法，也可以继续添加词。','Your words are planted. Watch them grow and meet, or add another.');
+  if(seeds>=5) text+=tr(' 已经种下不少词，可以先等等，观察它们生长。',' You have planted several words; try watching them grow.');
   document.querySelector('#guide').textContent=text;
 }
 
@@ -79,14 +81,14 @@ function guideNewSeed(node) {
 }
 
 function addNode(x, y, word, child = false, roots = null, waitForIdea = false) {
-  const node = {id:nodes.length, x, y, word, child, roots:roots || [word], color:child?'#b15d43':colors[nodes.length % colors.length], born:simTime, pending:waitForIdea};
+  const node = {id:nodes.length, x, y, word, child, roots:roots || [word], color:child?'#f0caa5':colors[nodes.length % colors.length], born:simTime, pending:waitForIdea};
   nodes.push(node);
   const el = document.createElement('div');
   el.className = 'spore' + (child ? ' child' : '');
   el.style.left = x + 'px'; el.style.top = y + 'px';
   el.innerHTML = '<div class="core"></div><label></label><small></small>';
   el.querySelector('label').textContent = word;
-  if(child) el.querySelector('label').addEventListener('click',()=>{if(node.description) showIdea(node);else if(node.failed){node.autoAttempts=0;requestIdea(node);updateStatus('正在重新联想…');}});
+  if(child) el.querySelector('label').addEventListener('click',()=>{if(node.description) showIdea(node);else if(node.failed){node.autoAttempts=0;requestIdea(node);updateStatus(tr('正在重新联想…','Trying again…'));}});
   el.querySelector('small').textContent = child ? 'NEW IDEA' : 'SEED ' + String(nodes.filter(n => !n.child).length).padStart(2, '0');
   document.body.append(el); node.el = el;
   if (child) positionLabel(node);
@@ -115,7 +117,7 @@ function showIdea(node) {
   selectedIdea=node;
   document.querySelector('#idea-title').textContent=node.word;
   document.querySelector('#idea-description').textContent=node.description;
-  document.querySelector('#idea-origin').textContent=`来自：${node.inputs[0]} × ${node.inputs[1]} · ${node.variation||''}`;
+  document.querySelector('#idea-origin').textContent=tr(`来自：${node.inputs[0]} × ${node.inputs[1]}`,`From: ${node.inputs[0]} × ${node.inputs[1]}`);
   document.querySelector('#regenerate').disabled=node.pending;
   document.querySelector('#idea-card').hidden=false;
 }
@@ -140,19 +142,19 @@ function requestIdea(node) {
   node.revision=(node.revision||0)+1;
   node.variation=variations[(node.id+node.revision-1)%variations.length];
   node.pending = true; node.failed = false;
-  node.el.querySelector('label').textContent = '等待联想…';
+  node.el.querySelector('label').textContent = tr('等待联想…','Waiting…');
   updateGuide();
-  if(selectedIdea===node){document.querySelector('#idea-description').textContent='正在尝试另一种组合…';document.querySelector('#regenerate').disabled=true;}
+  if(selectedIdea===node){document.querySelector('#idea-description').textContent=tr('正在尝试另一种组合…','Trying another connection…');document.querySelector('#regenerate').disabled=true;}
   (async()=>{
     if (nodes[node.id]!==node) return;
-    node.el.querySelector('label').textContent='菌落生长中…';
+    node.el.querySelector('label').textContent=tr('菌落生长中…','Colony growing…');
     const growing=nodes.filter(n=>n.pending).length;
-    updateStatus(growing > 1 ? `菌落生长中 · ${growing} 个新念头正在萌发` : '菌落生长中…');
+    updateStatus(growing > 1 ? tr(`菌落生长中 · ${growing} 个新念头正在萌发`,`Colonies growing · ${growing} ideas emerging`) : tr('菌落生长中…','Colony growing…'));
     try {
       const existingNames=[...nodes.filter(n=>n!==node&&!n.pending&&!n.failed).map(n=>n.word),...(node.previousWords||[])].slice(-20);
-      const response = await fetch('/api/idea', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({words:node.inputs,existingNames,variation:node.variation})});
+      const response = await fetch('/api/idea', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({words:node.inputs,existingNames,variation:node.variation,language})});
       const data = await response.json();
-      if (!response.ok || !data.name || !data.idea) throw new Error(data.error || '本地模型没有响应');
+      if (!response.ok || !data.name || !data.idea) throw new Error(language==='en' ? 'The local model did not respond. Check Ollama and retry.' : (data.error || '本地模型没有响应'));
       if (!await reserveIdeaDisplay(node) || nodes[node.id]!==node) return;
       node.word=data.name;node.description=data.idea;node.pending=false;node.autoAttempts=0;node.el.querySelector('label').textContent=data.name;
       positionLabel(node);
@@ -165,17 +167,17 @@ function requestIdea(node) {
       if (nodes[node.id]!==node) return;
       if((node.autoAttempts||0)<1){
         node.autoAttempts=(node.autoAttempts||0)+1;
-        node.el.querySelector('label').textContent='重新联想…';
-        updateStatus('这次没有生成完整想法，正在自动重试…');
+        node.el.querySelector('label').textContent=tr('重新联想…','Trying again…');
+        updateStatus(tr('这次没有生成完整想法，正在自动重试…','No complete idea yet; trying again…'));
         await new Promise(resolve=>setTimeout(resolve,2000));
         if(nodes[node.id]===node)requestIdea(node);
         return;
       }
       node.pending=false;
       if(node.description){node.failed=false;node.el.querySelector('label').textContent=node.word;if(selectedIdea===node)showIdea(node);}
-      else{node.failed=true;node.el.querySelector('label').textContent='点击重试';document.querySelector('#retry').hidden=false;}
+      else{node.failed=true;node.el.querySelector('label').textContent=tr('点击重试','Click to retry');document.querySelector('#retry').hidden=false;}
       updateGuide();
-      updateStatus(error.message || '暂时没生成出来，可以重试');
+      updateStatus(error.message || tr('暂时没生成出来，可以重试','Could not generate an idea; retry.'));
     } finally {
       if(nodes[node.id]===node) pumpCollisions();
     }
@@ -237,7 +239,7 @@ function pumpCollisions() {
     if(nodes[a.id]!==a || nodes[b.id]!==b || a.pending || b.pending || a.failed || b.failed || encounters.has(key) || !hasRoomForIdea(x,y,a,b)) continue;
     encounters.add(key);
     const roots=[...new Set([...a.roots,...b.roots])];
-    const child=addNode(x,y,'等待联想…',true,roots,true);
+    const child=addNode(x,y,tr('等待联想…','Waiting…'),true,roots,true);
     const core=child.el.querySelector('.core');
     const revealCore=()=>{
       if(nodes[child.id]!==child) return;
@@ -250,7 +252,7 @@ function pumpCollisions() {
     child.inputs=[a.word,b.word];
     child.manualTriggered=manualTriggered;child.triggeredAt=triggeredAt;
     // The new colony starts growing when its generated word is revealed.
-    updateStatus(`「${a.word}」和「${b.word}」相遇，菌落生长中…`);
+    updateStatus(tr(`「${a.word}」和「${b.word}」相遇，菌落生长中…`,`${a.word} and ${b.word} met · colony growing…`));
     nextBirthAt=simTime+8000+Math.random()*4000;
     requestIdea(child);
   }
@@ -325,10 +327,11 @@ function grow() {
     const taper=Math.max(.55,1-p.age/(p.depth===0?500:300));
     const width=[1.9,1.2,.82,.58,.42][p.depth]*taper;
     veinCtx.strokeStyle=source.color; veinCtx.lineCap='round'; veinCtx.lineJoin='round';
+    veinCtx.shadowColor=source.color; veinCtx.shadowBlur=3;
     veinCtx.beginPath(); veinCtx.moveTo(ox,oy); veinCtx.lineTo(p.x,p.y);
     veinCtx.globalAlpha=[.10,.095,.09,.085,.08][p.depth]; veinCtx.lineWidth=width+1.4; veinCtx.stroke();
     veinCtx.globalAlpha=[.55,.52,.49,.46,.43][p.depth]*(.9+.1*taper); veinCtx.lineWidth=width; veinCtx.stroke();
-    veinCtx.globalAlpha=1;
+    veinCtx.globalAlpha=1; veinCtx.shadowBlur=0;
     sense(p);
     if(p.target && Math.hypot(p.target.x-p.x,p.target.y-p.y)<4){
       meet(p.source,p.target.source,(p.x+p.target.x)/2,(p.y+p.target.y)/2);
@@ -383,7 +386,7 @@ function drawColony(node,time){
       ctx.quadraticCurveTo(node.x+p[0]*progress,node.y+p[1]*progress,node.x+(p[0]+q[0])*progress/2,node.y+(p[1]+q[1])*progress/2);
     }
     const last=pts.at(-1);ctx.lineTo(node.x+last[0]*progress,node.y+last[1]*progress);
-    ctx.strokeStyle=node.child?'#b15d43':'#52745b';
+    ctx.strokeStyle=node.child?'#f0caa5':'#d5ecd1';
     ctx.globalAlpha=[.72,.55,.42,.3][strand.depth];
     ctx.lineWidth=[1.5,1.05,.72,.48][strand.depth];
     ctx.stroke();
@@ -421,7 +424,7 @@ function render(time) {
     grow();
     frame++;
   }
-  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);
+  ctx.fillStyle='#090d0b';ctx.fillRect(0,0,w,h);
   ctx.drawImage(veins,0,0,w,h);
   ctx.globalAlpha=1;
   requestAnimationFrame(render);
@@ -432,25 +435,44 @@ document.querySelector('#form').addEventListener('submit', e=>{
   if (e.submitter?.value==='cancel') return;
   const word=input.value.trim();if (!word || !pending){e.preventDefault();return;}
   lastPlantAt=performance.now();
-  const planted=addNode(pending.x,pending.y,word);planted.manualSeed=true;planted.plantedAt=lastPlantAt;guideNewSeed(planted);pending=null;running=true;document.querySelector('#pause').textContent='暂停生长';
+  const planted=addNode(pending.x,pending.y,word);planted.manualSeed=true;planted.plantedAt=lastPlantAt;guideNewSeed(planted);pending=null;running=true;document.querySelector('#pause').textContent=tr('暂停生长','Pause');
   nextBirthAt=simTime+1000;
 });
 document.querySelector('#cancel').onclick=()=>{pending=null;editor.close();};
-document.querySelector('#pause').onclick=e=>{running=!running;e.currentTarget.textContent=running?'暂停生长':'继续生长';updateStatus(running?'正在生长':'已暂停');};
+document.querySelector('#pause').onclick=e=>{running=!running;e.currentTarget.textContent=running?tr('暂停生长','Pause'):tr('继续生长','Resume');updateStatus(running?tr('正在生长','Growing'):tr('已暂停','Paused'));};
 document.querySelector('#clear').onclick=()=>{
   nodes.forEach(n=>n.el.remove());nodes=[];fronts=[];links=[];collisionQueue=[];queuedPairs.clear();simTime=0;nextBirthAt=0;occupied.clear();encounters.clear();
   lastAutoShownAt=-Infinity;nextAutoDelay=0;lastPlantAt=-Infinity;
   document.querySelector('#retry').hidden=true;
   document.querySelector('#idea-card').hidden=true;
   selectedIdea=null;
-  filmCtx.clearRect(0,0,w,h);veinCtx.clearRect(0,0,w,h);updateStatus('等待第一颗孢子');updateGuide();
+  filmCtx.clearRect(0,0,w,h);veinCtx.clearRect(0,0,w,h);updateStatus(tr('等待第一颗孢子','Waiting for the first seed'));updateGuide();
 };
-document.querySelector('#retry').onclick=()=>{const failed=nodes.filter(n=>n.failed);document.querySelector('#retry').hidden=true;failed.forEach(node=>{node.autoAttempts=0;requestIdea(node)});if(failed.length)updateStatus('正在重新联想…');};
-document.querySelector('#regenerate').onclick=()=>{if(selectedIdea&&!selectedIdea.pending){requestIdea(selectedIdea);updateStatus('正在换一种方式联想…');}};
+document.querySelector('#retry').onclick=()=>{const failed=nodes.filter(n=>n.failed);document.querySelector('#retry').hidden=true;failed.forEach(node=>{node.autoAttempts=0;requestIdea(node)});if(failed.length)updateStatus(tr('正在重新联想…','Trying again…'));};
+document.querySelector('#regenerate').onclick=()=>{if(selectedIdea&&!selectedIdea.pending){requestIdea(selectedIdea);updateStatus(tr('正在换一种方式联想…','Trying another connection…'));}};
 document.querySelector('#example').onclick=()=>{
   document.querySelector('#clear').click();
   const cx=w/2,cy=h/2;
-  addNode(cx-160,cy-65,'雨天');addNode(cx+160,cy-90,'便利店');addNode(cx+25,cy+155,'失眠');
-  running=true;document.querySelector('#pause').textContent='暂停生长';
+  addNode(cx-160,cy-65,tr('雨天','rain'));addNode(cx+160,cy-90,tr('便利店','corner shop'));addNode(cx+25,cy+155,tr('失眠','sleeplessness'));
+  running=true;document.querySelector('#pause').textContent=tr('暂停生长','Pause');
+};
+document.querySelector('#language').onclick=()=>{
+  language=language==='zh'?'en':'zh';
+  document.documentElement.lang=language==='en'?'en':'zh-Hans';
+  document.querySelector('#heading').textContent=tr('念头培养皿','Idea Culture');
+  document.querySelector('#intro').textContent=tr('它们会生长，寻找别的词，并在相遇时繁衍出你意想不到的新念头。','Words grow, seek others, and give rise to unexpected ideas when they meet.');
+  document.querySelector('#example').textContent=tr('种下示例','Plant examples');
+  document.querySelector('#pause').textContent=running?tr('暂停生长','Pause'):tr('继续生长','Resume');
+  document.querySelector('#clear').textContent=tr('清空培养皿','Clear dish');
+  document.querySelector('#retry').textContent=tr('重试联想','Retry');
+  document.querySelector('#regenerate').textContent=tr('换个想法','Another idea');
+  document.querySelector('#editor-title').textContent=tr('种下一颗念头','Plant an idea');
+  document.querySelector('#editor-help').textContent=tr('输入一个词或短句，然后点击「种下」。可以是日常事物，也可以是抽象概念，比如拓扑、量子或自由。','Enter a word or short phrase, then select Plant. Try everyday things or abstract concepts, such as topology, quantum or freedom.');
+  input.placeholder=tr('例如：雨天、拓扑、量子…','e.g. rain, topology, quantum…');
+  document.querySelector('#cancel').textContent=tr('取消','Cancel');
+  document.querySelector('#plant').textContent=tr('种下','Plant');
+  nodes.filter(n=>n.child&&(n.pending||n.failed)).forEach(n=>n.el.querySelector('label').textContent=n.pending?tr('菌落生长中…','Colony growing…'):tr('点击重试','Click to retry'));
+  if(selectedIdea)showIdea(selectedIdea);
+  updateGuide();updateStatus(nodes.length?null:tr('等待第一颗孢子','Waiting for the first seed'));
 };
 addEventListener('resize',size);size();requestAnimationFrame(render);

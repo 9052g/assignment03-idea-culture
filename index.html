@@ -64,16 +64,35 @@
     dialog p{color:#64786a}
     input{background:#fff;border-color:#bdc9bf;color:#26352d}
     input:focus{border-color:#567763}
-    @media(max-width:600px){header{top:18px;left:18px;right:18px}.hint{display:none}.toolbar{left:18px;bottom:18px;right:18px}.status{width:100%;margin:2px 0 0}.spore label{font-size:11px}.idea-card{top:auto;bottom:115px;right:18px;width:min(240px,55vw);padding:12px}}
+    /* Night specimen: dark ground with softly luminous strands. */
+    :root{color:#eef1df;background:#090d0b}
+    .grain{display:none} header{text-shadow:none}
+    .eyebrow,.hint{color:#a7b9a6} h1{color:#f0f2e6} .desc{color:#bccabe}
+    button{background:#151e19ef;border-color:#6b8270;color:#e5eee4}
+    button:hover{background:#263a2d} button.primary{background:#d2e3bc;border-color:#d2e3bc;color:#1a2a1d}
+    .status{color:#b5c9b5}
+    .spore .core{background:#e1f2d3;box-shadow:0 0 0 3px #c8eac633,0 0 14px 4px #b6e6c499}
+    .spore label{background:#0b140fed;color:#e4f1e0}
+    .spore.child .core{background:#ffd7a9;box-shadow:0 0 0 3px #ffd7a933,0 0 16px 5px #efbd8b99}
+    .spore.child label{color:#ffdbb4;background:#21180fed;border-color:#e9b98977}
+    .spore.child label:hover{color:#fff4df;background:#3a291a}
+    .idea-card{background:#101a14f5;border-color:#829c82aa;box-shadow:0 10px 35px #0008}
+    .idea-card .kicker,.idea-card small{color:#a7bea5} .idea-card h2{color:#ffdfbc}.idea-card p{color:#d0ded0}
+    dialog{background:#152018;border-color:#819c83;color:#edf4e8}dialog::backdrop{background:#000b}
+    dialog p{color:#c0d0bd} input{background:#0a130e;border-color:#718b75;color:#f1f8ee}input:focus{border-color:#d6edc6}
+    .language{position:fixed;right:30px;top:24px;z-index:5;letter-spacing:.04em}
+    .hint{top:80px}
+    @media(max-width:600px){header{top:18px;left:18px;right:90px}.hint{display:none}.language{right:18px;top:18px}.toolbar{left:18px;bottom:18px;right:18px}.status{width:100%;margin:2px 0 0}.spore label{font-size:11px}.idea-card{top:auto;bottom:115px;right:18px;width:min(240px,55vw);padding:12px}}
   </style>
 </head>
 <body>
   <canvas id="world" aria-label="会生长的想法培养皿"></canvas><div class="grain"></div>
-  <header><div class="eyebrow">IDEA CULTURE / 01</div><h1>念头培养皿</h1><p class="desc" style="margin-bottom:8px">它们会生长，寻找别的词，并在相遇时繁衍出你意想不到的新念头。</p><p class="desc" id="guide" aria-live="polite">点击画面空白处，输入一个词并点「种下」；然后点击附近的另一处空白，输入并种下第二个词。建议先种下 2—3 个词，观察它们生长。</p></header>
+  <header><div class="eyebrow">IDEA CULTURE / 01</div><h1 id="heading">念头培养皿</h1><p class="desc" id="intro" style="margin-bottom:8px">它们会生长，寻找别的词，并在相遇时繁衍出你意想不到的新念头。</p><p class="desc" id="guide" aria-live="polite">点击画面空白处，输入一个词并点「种下」；然后点击附近的另一处空白，输入并种下第二个词。建议先种下 2—3 个词，观察它们生长。</p></header>
+  <button class="language" id="language" type="button" aria-label="Switch language">EN / 中文</button>
   <div class="hint">CLICK TO PLANT<br>WATCH THEM GROW</div>
   <aside class="idea-card" id="idea-card" hidden aria-live="polite"><div class="kicker">A NEW IDEA</div><h2 id="idea-title"></h2><p id="idea-description"></p><small id="idea-origin"></small><button id="regenerate" type="button">换个想法</button></aside>
   <div class="toolbar"><button class="primary" id="example">种下示例</button><button id="pause">暂停生长</button><button id="clear">清空培养皿</button><button id="retry" hidden>重试联想</button><span class="status" id="status" role="status">等待第一颗孢子</span></div>
-  <dialog id="editor"><form method="dialog" id="form"><h2>种下一颗念头</h2><p>输入一个词或短句，然后点击「种下」。可以是日常事物，也可以是抽象概念，比如拓扑、量子或自由。</p><input id="idea" maxlength="24" placeholder="例如：雨天、拓扑、量子…" autocomplete="off" required><div class="formrow"><button value="cancel" type="button" id="cancel">取消</button><button class="primary" value="plant" type="submit">种下</button></div></form></dialog>
+  <dialog id="editor"><form method="dialog" id="form"><h2 id="editor-title">种下一颗念头</h2><p id="editor-help">输入一个词或短句，然后点击「种下」。可以是日常事物，也可以是抽象概念，比如拓扑、量子或自由。</p><input id="idea" maxlength="24" placeholder="例如：雨天、拓扑、量子…" autocomplete="off" required><div class="formrow"><button value="cancel" type="button" id="cancel">取消</button><button class="primary" id="plant" value="plant" type="submit">种下</button></div></form></dialog>
   <script src="app.js"></script>
 </body>
 </html>
