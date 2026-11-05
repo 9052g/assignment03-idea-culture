@@ -2,9 +2,12 @@
 
 An interactive artwork for people exploring unfamiliar connections between ideas. Plant words on a digital petri dish and watch slime-mould-inspired networks grow. When networks meet, a language model proposes a new idea at the intersection; that colony can grow in turn.
 
-**Primary version: run locally.** This submission is intended to be run with Ollama on your own computer. See [Run locally](#run-locally) below; the screenshot and recording demonstrate the interaction if installation is unavailable.
+## Two ways to experience the work
 
-**Online version:** The separately hosted [online version](https://idea-culture-living-thoughts.dustycorgi1.chatgpt.site/) has experienced access and generation failures and may not be reachable. It uses Google Gemini and sends entered words to that service; do not enter private information. The local version uses Ollama on your own computer.
+- **Online version:** [Open Idea Culture](https://idea-culture-living-thoughts.dustycorgi1.chatgpt.site/). The hosted version has recently experienced access and idea-generation failures and may not be reachable. It uses Google Gemini; entered words are sent to that service, so please do not enter private information.
+- **Local version:** Run the included application with Ollama on your own computer; follow [Run locally](#run-locally) below. This requires installing Ollama and downloading the model.
+
+If either version is unavailable, the screenshot and recording below show the interaction without setup.
 
 ![Idea Culture screenshot showing seed words, growing hyphae and generated associations](screenshot.png)
 
