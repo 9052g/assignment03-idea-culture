@@ -4,7 +4,7 @@ An interactive artwork for people exploring unfamiliar connections between ideas
 
 ## Two ways to experience the work
 
-- **Online version:** [Open Idea Culture](https://idea-culture-living-thoughts.dustycorgi1.chatgpt.site/). The hosted version has recently experienced access and idea-generation failures and may not be reachable. It uses Google Gemini; entered words are sent to that service, so please do not enter private information.
+- **Online version:** [Open Idea Culture](https://idea-culture-living-thoughts.dustycorgi1.chatgpt.site/experience/). The hosted version has recently experienced access and idea-generation failures and may not be reachable. It uses Google Gemini; entered words are sent to that service, so please do not enter private information.
 - **Local version:** Run the included application with Ollama on your own computer; follow [Run locally](#run-locally) below. This requires installing Ollama and downloading the model.
 
 If either version is unavailable, the screenshot and recording below show the interaction without setup.
